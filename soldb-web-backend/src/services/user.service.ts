@@ -57,6 +57,16 @@ class UserService {
     if (!user) {
       let username = this.getUsernameFromEmail(token.email);
 
+      const exists = await prisma.user.findUnique({
+        where: {
+          username,
+        },
+      });
+
+      if (exists) {
+        username = `${username}-${Math.floor(100 + Math.random() * 900).toString()}`; // lol
+      }
+
       try {
         user = await prisma.user.create({
           data: {
@@ -80,8 +90,42 @@ class UserService {
     return jwtAuth;
   };
 
-  get = async () => {};
-  update = async () => {};
+  get = async (id: string) => {
+    const user = await prisma.user.findUnique({
+      where: {
+        id,
+      },
+    });
+
+    if (!user) throw new AppError("User not found", 404);
+
+    return user;
+  };
+
+  update = async (id: string, newUsername: string) => {
+    const exists = await prisma.user.findUnique({
+      where: {
+        username: newUsername,
+      },
+    });
+
+    if (exists) {
+      throw new AppError("Given username is not available", 409);
+    }
+
+    try {
+      return await prisma.user.update({
+        where: {
+          id,
+        },
+        data: {
+          username: newUsername,
+        },
+      });
+    } catch (err: any) {
+      throw new AppError("Failed to update username", 500, err);
+    }
+  };
 
   private getUsernameFromEmail = (email: string) => {
     return email

@@ -1,21 +1,36 @@
-import { Router } from "express"; // todo authReq
+import { Router } from "express";
+import Joi from "joi";
 
 import UserService from "../services/user.service";
-import { AppError } from "../utils/error.util";
+import { validate } from "../middleware/validation.middleware";
+import { AuthRequest, authMiddleware } from "../middleware/auth.middleware";
 
 const userService = new UserService();
 const userRouter = Router();
 
-userRouter.post("/auth/request", async (req, res, next) => {
+const requestAuthSchema = Joi.object({
+  email: Joi.string().email().required(),
+});
+
+const authSchema = Joi.object({
+  token: Joi.string()
+    .pattern(/^[a-f0-9]{64}$/i)
+    .required(),
+});
+
+const updateUserSchema = Joi.object({
+  username: Joi.string()
+    .pattern(/^[a-zA-Z0-9._-]+$/)
+    .min(3)
+    .max(32)
+    .required(),
+});
+
+userRouter.post("/auth/request", validate(requestAuthSchema), async (req, res, next) => {
   try {
     const { email } = req.body;
 
-    if (!email) {
-      // todo proepr validation
-      throw new AppError("Missing email in request", 400);
-    }
-
-    const url = userService.requestAuth(email);
+    const url = await userService.requestAuth(email);
 
     res.status(200).json({
       devOnlyUrl: url, // 1 factor auth :D
@@ -25,31 +40,23 @@ userRouter.post("/auth/request", async (req, res, next) => {
   }
 });
 
-userRouter.post("/auth", async (req, res, next) => {
+userRouter.post("/auth", validate(authSchema), async (req, res, next) => {
   try {
     const { token } = req.body;
 
-    if (!token) {
-      // todo proepr validation
-      throw new AppError("Missing token in request", 400);
-    }
-
-    const jwt = userService.auth(token);
+    const jwt = await userService.auth(token);
 
     // set cookie
 
-    res.status(200);
+    res.status(200).json({ token: jwt });
   } catch (err: any) {
     next(err);
   }
 });
 
-// todo onlyAuth middleware
-userRouter.get("/", async (req, res, next) => {
+userRouter.get("/", authMiddleware, async (req: AuthRequest, res, next) => {
   try {
-    const id = "0x1";
-
-    const user = await userService.get(id);
+    const user = await userService.get(req.user!.id);
 
     res.status(200).json(user);
   } catch (err: any) {
@@ -57,22 +64,21 @@ userRouter.get("/", async (req, res, next) => {
   }
 });
 
-// todo onlyAuth middleware
-userRouter.patch("/", async (req, res, next) => {
-  try {
-    const id = "0x1";
-    const { username } = req.body;
+userRouter.patch(
+  "/",
+  authMiddleware,
+  validate(updateUserSchema),
+  async (req: AuthRequest, res, next) => {
+    try {
+      const { username } = req.body;
 
-    if (!username) {
-      throw new AppError("Missing username in request", 400);
+      const user = await userService.update(req.user!.id, username);
+
+      res.status(200).json(user);
+    } catch (err: any) {
+      next(err);
     }
-
-    const user = await userService.update(id, username);
-
-    res.status(200).json(user);
-  } catch (err: any) {
-    next(err);
-  }
-});
+  },
+);
 
 export default userRouter;

@@ -83,9 +83,13 @@ class UserService {
       }
     }
 
-    const jwtAuth = jwt.sign({ email: token.email }, process.env.JWT_SECRET!, {
-      expiresIn: "30d",
-    });
+    const jwtAuth = jwt.sign(
+      { id: user.id, email: user.email },
+      process.env.JWT_SECRET!,
+      {
+        expiresIn: "30d",
+      },
+    );
 
     return jwtAuth;
   };

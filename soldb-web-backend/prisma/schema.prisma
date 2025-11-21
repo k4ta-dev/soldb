@@ -2,7 +2,7 @@ generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {g
+datasource db {
   provider = "postgresql"
 }
 
@@ -10,6 +10,8 @@ model User {
   id String @id @default(uuid())
   email String @unique
   username String @unique
+
+  apiKeys APIKey[]
 }
 
 model MagicLink {
@@ -19,4 +21,18 @@ model MagicLink {
   expiresAt DateTime
   used Boolean @default (false)
   createdAt DateTime @default(now())
+}
+
+model APIKey {
+  id String @id @default(uuid())
+  name String?
+  keyHash String @db.VarChar(128) @unique
+  userId String
+  revoked Boolean @default(false)
+  createdAt DateTime @default(now())
+  lastUsedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

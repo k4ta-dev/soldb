@@ -18,9 +18,6 @@ export const validate =
       return;
     }
 
-    // overwrite the request section with the validated (and stripped) payload
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-expect-error - express Request type does not express narrowed body shape
     req[part] = value;
     next();
   };

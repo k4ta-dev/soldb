@@ -1,9 +1,5 @@
 import * as dotenv from "dotenv";
 import express, { NextFunction, Request, Response } from "express";
-import swaggerUi from "swagger-ui-express";
-import { readFileSync } from "fs";
-import path from "path";
-import YAML from "yaml";
 
 import apiKeyRouter from "./routers/apiKey.router";
 import userRouter from "./routers/user.router";
@@ -14,10 +10,6 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
-const openapiPath = path.join(process.cwd(), "openapi.yaml");
-const openapiDocument = YAML.parse(readFileSync(openapiPath, "utf8"));
-
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapiDocument));
 
 app.get("/", (_req, res) => {
   res.status(200).json({ message: "soldb-web-backend" });
